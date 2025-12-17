@@ -1,1 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>神秘黑盒子大揭密</title>
+    <style>
+        body { font-family: "Segoe UI", "微軟正黑體", sans-serif; background-color: #f0f4f8; display: flex; flex-direction: column; align-items: center; user-select: none; touch-action: none; padding-bottom: 50px; }
+        
+        /* Header Styling */
+        h1 { color: #2c3e50; margin-bottom: 5px; font-size: 28px; }
+        
+        /* Layout Containers */
+        .container { max-width: 900px; width: 100%; padding: 0 10px; display: flex; flex-direction: column; align-items: center; }
 
+        /* Intro & Instructions */
+        .info-panel { background: white; width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .intro-text { background: #e8f4f8; padding: 15px 25px; border-left: 6px solid #3498db; color: #555; line-height: 1.6; font-size: 1.05em; }
+        
+        .instruction-box { padding: 15px 25px; background: #fff; border-top: 1px solid #eee; }
+        .instruction-title { font-weight: bold; color: #2c3e50; margin-bottom: 10px; display: block; font-size: 1.1em; }
+        .instruction-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 15px; }
+        .instruction-item { display: flex; align-items: center; font-size: 0.95em; color: #666; background: #f9f9f9; padding: 8px 12px; border-radius: 6px; border: 1px solid #eee; }
+        .instruction-icon { margin-right: 8px; font-size: 1.2em; }
+        
+        /* Controls */
+        #controls { margin-bottom: 10px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 5px; border-right: 2px solid #eee; padding-right: 10px; align-items: center; }
+        .btn-group:last-child { border: none; }
+        button { padding: 10px 18px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        button:hover { background-color: #f0f0f0; transform: translateY(-1px); }
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-add { background-color: #3498db; color: white; }
+        .btn-add:hover { background-color: #2980b9; }
+        .btn-box { background-color: #8e44ad; color: white; }
+        .btn-box:hover { background-color: #732d91; }
+        .btn-clear { background-color: #e74c3c; color: white; }
+        .btn-clear:hover { background-color: #c0392b; }
+        
+        /* Canvas */
+        #canvas-container { position: relative; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; background-color: #fff; cursor: default; width: 100%; }
+        canvas { display: block; width: 100%; }
+        
+        /* Status & Legend */
+        #status { margin-top: 12px; font-weight: bold; color: #2c3e50; height: 28px; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .status-error { color: #e74c3c !important; animation: flash 1s infinite; }
+        @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .legend { margin-top: 5px; font-size: 14px; color: #555; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center;}
+        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; border: 1px solid #ccc; }
+
+        /* Answer Section */
+        .quiz-section { margin-top: 30px; background: white; padding: 20px 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); width: 100%; border-top: 5px solid #8e44ad; box-sizing: border-box; }
+        .quiz-section h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; }
+        .quiz-row { display: flex; align-items: center; margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
+        .quiz-label { font-weight: bold; width: 100px; color: #8e44ad; font-size: 1.1em; }
+        .quiz-select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; flex-grow: 1; min-width: 150px; }
+        .quiz-check-btn { background-color: #27ae60; color: white; padding: 8px 15px; }
+        .quiz-check-btn:hover { background-color: #219150; }
+        .quiz-result { margin-left: 10px; font-weight: bold; min-width: 120px; }
+        
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⚡️ 猜猜神秘電子盒子的身份？</h1>
+        
+        <div class="info-panel">
+            <div class="intro-text">
+                <b>🔎 任務說明：</b>扮演科學偵探！將電池、燈泡與下方的「神秘盒子」連接起來。觀察<b>燈泡亮度的變化</b>，推理出每個盒子裡面藏著什麼元件。
+            </div>
+            <div class="instruction-box">
+                <span class="instruction-title">📖 使用方法 (How to Play)：</span>
+                <ul class="instruction-list">
+                    <li class="instruction-item"><span class="instruction-icon">👆</span> <b>加入元件：</b> 點擊按鈕加入電池、燈泡或盒子。</li>
+                    <li class="instruction-item"><span class="instruction-icon">🖐️</span> <b>移動：</b> 按住元件拖曳到想要的位置。</li>
+                    <li class="instruction-item"><span class="instruction-icon">🔗</span> <b>連線：</b> 從黑點拉出導線，靠近另一黑點變<b style="color:#27ae60">綠色</b>時放開。</li>
+                    <li class="instruction-item"><span class="instruction-icon">🗑️</span> <b>刪除：</b> 對著元件或導線 <b>點擊兩下 (Double Click)</b> 即可刪除。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="controls">
+            <div class="btn-group">
+                <button id="btn-bat" class="btn-add" onclick="addUniqueComponent('battery')">➕ 電池</button>
+                <button id="btn-bulb" class="btn-add" onclick="addUniqueComponent('bulb')">💡 燈泡</button>
+            </div>
+            <div class="btn-group">
+                <span>測試對象：</span>
+                <button class="btn-box" onclick="addUniqueComponent('box', 'A')">Box A</button>
+                <button class="btn-box" onclick="addUniqueComponent('box', 'B')">Box B</button>
+                <button class="btn-box" onclick="addUniqueComponent('box', 'C')">Box C</button>
+                <button class="btn-box" onclick="addUniqueComponent('box', 'D')">Box D</button>
+            </div>
+            <button class="btn-clear" onclick="clearCanvas()">🗑️ 清除畫面</button>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="circuitCanvas" width="900" height="500"></canvas>
+        </div>
+
+        <div id="status">請拖曳元件並連接黑點開始實驗。</div>
+        
+        <div class="legend">
+            <div><span class="dot" style="background:#fff9c4"></span>暗 (Dim)</div>
+            <div><span class="dot" style="background:#ffeb3b"></span>正常 (Normal)</div>
+            <div><span class="dot" style="background:#ffffff; box-shadow: 0 0 5px #fff"></span>亮 (Bright)</div>
+            <div style="color:#e74c3c; font-weight:bold;"><span class="dot" style="background:#e74c3c; border:none;"></span>短路 (Short)</div>
+        </div>
+
+        <!-- 偵探筆記 (作答區) -->
+        <div class="quiz-section">
+            <h3>📝 偵探筆記：你的推論是什麼？</h3>
+            
+            <div class="quiz-row">
+                <span class="quiz-label">Box A 是...</span>
+                <select id="guess-A" class="quiz-select">
+                    <option value="">請選擇...</option>
+                    <option value="battery">電池 (Battery)</option>
+                    <option value="wire">電線 (Wire)</option>
+                    <option value="bulb">燈泡 (Bulb)</option>
+                    <option value="empty">空盒 (Empty)</option>
+                </select>
+                <button class="quiz-check-btn" onclick="checkAnswer('A')">檢查答案</button>
+                <span id="result-A" class="quiz-result"></span>
+            </div>
+
+            <div class="quiz-row">
+                <span class="quiz-label">Box B 是...</span>
+                <select id="guess-B" class="quiz-select">
+                    <option value="">請選擇...</option>
+                    <option value="battery">電池 (Battery)</option>
+                    <option value="wire">電線 (Wire)</option>
+                    <option value="bulb">燈泡 (Bulb)</option>
+                    <option value="empty">空盒 (Empty)</option>
+                </select>
+                <button class="quiz-check-btn" onclick="checkAnswer('B')">檢查答案</button>
+                <span id="result-B" class="quiz-result"></span>
+            </div>
+
+            <div class="quiz-row">
+                <span class="quiz-label">Box C 是...</span>
+                <select id="guess-C" class="quiz-select">
+                    <option value="">請選擇...</option>
+                    <option value="battery">電池 (Battery)</option>
+                    <option value="wire">電線 (Wire)</option>
+                    <option value="bulb">燈泡 (Bulb)</option>
+                    <option value="empty">空盒 (Empty)</option>
+                </select>
+                <button class="quiz-check-btn" onclick="checkAnswer('C')">檢查答案</button>
+                <span id="result-C" class="quiz-result"></span>
+            </div>
+
+            <div class="quiz-row">
+                <span class="quiz-label">Box D 是...</span>
+                <select id="guess-D" class="quiz-select">
+                    <option value="">請選擇...</option>
+                    <option value="battery">電池 (Battery)</option>
+                    <option value="wire">電線 (Wire)</option>
+                    <option value="bulb">燈泡 (Bulb)</option>
+                    <option value="empty">空盒 (Empty)</option>
+                </select>
+                <button class="quiz-check-btn" onclick="checkAnswer('D')">檢查答案</button>
+                <span id="result-D" class="quiz-result"></span>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('circuitCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusDiv = document.getElementById('status');
+    const btnBat = document.getElementById('btn-bat');
+    const btnBulb = document.getElementById('btn-bulb');
+
+    const SNAP_RADIUS = 30; 
+
+    let components = [];
+    let wires = [];
+    let isShortCircuit = false;
+    
+    // 互動變數
+    let isDragging = false;
+    let dragTarget = null;
+    let wireStartNode = null;
+    let mouseX = 0, mouseY = 0;
+    let snapNode = null; 
+
+    // --- 答題邏輯 ---
+    const correctAnswers = {
+        'A': 'battery',
+        'B': 'empty',
+        'C': 'wire',
+        'D': 'bulb'
+    };
+
+    function checkAnswer(boxId) {
+        const select = document.getElementById(`guess-${boxId}`);
+        const resultSpan = document.getElementById(`result-${boxId}`);
+        const userGuess = select.value;
+
+        if (!userGuess) {
+            resultSpan.innerHTML = "⚠️ 請先選擇";
+            resultSpan.style.color = "#e67e22";
+            return;
+        }
+
+        if (userGuess === correctAnswers[boxId]) {
+            resultSpan.innerHTML = "✅ 答對了！";
+            resultSpan.style.color = "#27ae60";
+        } else {
+            resultSpan.innerHTML = "❌ 再想一想";
+            resultSpan.style.color = "#c0392b";
+        }
+    }
+
+    // --- 模擬器核心 ---
+    class Component {
+        constructor(type, x, y, subType = null) {
+            this.id = Date.now() + Math.random();
+            this.type = type; 
+            this.subType = subType;
+            this.x = x;
+            this.y = y;
+            this.brightness = 0; 
+            this.isOverheated = false;
+            
+            if (type === 'battery') {
+                this.width = 80; this.height = 40;
+                this.nodes = [ { id: 0, x: -45, y: 0 }, { id: 1, x: 45, y: 0 } ];
+            } else if (type === 'bulb') {
+                this.width = 40; this.height = 70;
+                this.nodes = [ { id: 0, x: 0, y: 32 }, { id: 1, x: 16, y: 18 } ];
+            } else if (type === 'box') {
+                this.width = 100; this.height = 60;
+                this.nodes = [ { id: 0, x: -50, y: 0 }, { id: 1, x: 50, y: 0 } ];
+            }
+        }
+
+        getWorldNode(index) {
+            return {
+                x: this.x + this.nodes[index].x,
+                y: this.y + this.nodes[index].y,
+                parentId: this.id,
+                nodeIndex: index,
+                component: this
+            };
+        }
+        
+        checkNodeProximity(mx, my) {
+            for(let i=0; i<this.nodes.length; i++) {
+                let wn = this.getWorldNode(i);
+                let dist = Math.sqrt((mx - wn.x)**2 + (my - wn.y)**2);
+                if(dist < SNAP_RADIUS) return wn;
+            }
+            return null;
+        }
+
+        isMouseOverBody(mx, my) {
+             let w = this.width, h = this.height;
+             return mx > this.x - w/2 && mx < this.x + w/2 &&
+                    my > this.y - h/2 && my < this.y + h/2;
+        }
+    }
+
+    function init() {
+        clearCanvas();
+        requestAnimationFrame(draw);
+    }
+
+    function addUniqueComponent(type, subType = null) {
+        if (type === 'battery' && components.some(c => c.type === 'battery')) {
+            updateStatus("限制：只能使用一顆電池", true); return;
+        }
+        if (type === 'bulb' && components.some(c => c.type === 'bulb')) {
+            updateStatus("限制：只能使用一顆燈泡", true); return;
+        }
+        if (type === 'box') {
+            let oldBox = components.find(c => c.type === 'box');
+            if (oldBox) removeComponent(oldBox);
+        }
+
+        let startX = 250, startY = 250;
+        if (type === 'bulb') { startX = 550; }
+        if (type === 'box') { startX = 400; startY = 380; }
+
+        components.push(new Component(type, startX, startY, subType));
+        updateButtons();
+        checkCircuit();
+    }
+
+    function removeComponent(comp) {
+        components = components.filter(c => c.id !== comp.id);
+        wires = wires.filter(w => w.startCompId !== comp.id && w.endCompId !== comp.id);
+        updateButtons();
+        checkCircuit();
+    }
+
+    function clearCanvas() {
+        components = [];
+        wires = [];
+        updateButtons();
+        checkCircuit();
+        updateStatus("請拖曳元件並連接黑點");
+    }
+
+    function updateButtons() {
+        btnBat.disabled = components.some(c => c.type === 'battery');
+        btnBulb.disabled = components.some(c => c.type === 'bulb');
+    }
+    
+    function updateStatus(msg, isError = false) {
+        statusDiv.innerText = msg;
+        statusDiv.className = isError ? "status-error" : "";
+        if(isError) setTimeout(() => { statusDiv.className = ""; }, 2000);
+    }
+
+    // --- 繪圖 ---
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 導線
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        wires.forEach(w => {
+            let c1 = components.find(c => c.id === w.startCompId);
+            let c2 = components.find(c => c.id === w.endCompId);
+            if(c1 && c2) {
+                let p1 = c1.getWorldNode(w.startNodeIdx);
+                let p2 = c2.getWorldNode(w.endNodeIdx);
+                
+                if (w.isHot) {
+                    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 6; ctx.shadowColor='red'; ctx.shadowBlur=10;
+                } else {
+                    ctx.strokeStyle = '#34495e'; ctx.lineWidth = 4; ctx.shadowBlur=0;
+                }
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                ctx.shadowBlur = 0;
+                
+                ctx.fillStyle = w.isHot ? '#e74c3c' : '#7f8c8d';
+                ctx.beginPath(); ctx.arc(p1.x, p1.y, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p2.x, p2.y, 5, 0, Math.PI*2); ctx.fill();
+            }
+        });
+
+        // 拉線預覽
+        if (isDragging && wireStartNode) {
+            let targetX = mouseX;
+            let targetY = mouseY;
+            let strokeColor = '#95a5a6';
+            let lineWidth = 3;
+
+            if (snapNode) {
+                targetX = snapNode.x;
+                targetY = snapNode.y;
+                strokeColor = '#2ecc71'; lineWidth = 5;
+            }
+
+            ctx.strokeStyle = strokeColor; ctx.lineWidth = lineWidth; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(wireStartNode.x, wireStartNode.y); ctx.lineTo(targetX, targetY); ctx.stroke(); ctx.setLineDash([]);
+
+            if (snapNode) {
+                ctx.beginPath(); ctx.arc(targetX, targetY, 10, 0, Math.PI*2);
+                ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.stroke();
+            }
+        }
+
+        // 元件
+        components.forEach(c => {
+            ctx.save();
+            if (c.isOverheated) {
+                let dx = (Math.random()-0.5)*4; let dy = (Math.random()-0.5)*4;
+                ctx.translate(c.x+dx, c.y+dy);
+            } else {
+                ctx.translate(c.x, c.y);
+            }
+
+            if (c.type === 'battery') {
+                ctx.fillStyle = c.isOverheated ? '#e74c3c' : '#95a5a6';
+                ctx.fillRect(-40, -15, 80, 30);
+                ctx.fillStyle = '#f39c12'; ctx.fillRect(-30, -15, 60, 30); ctx.strokeRect(-40, -15, 80, 30);
+                ctx.fillStyle = '#bdc3c7'; ctx.fillRect(40, -8, 6, 16); ctx.strokeRect(40, -8, 6, 16);
+                ctx.fillStyle = 'black'; ctx.font="bold 14px Arial"; ctx.fillText("+", 25, 5); ctx.fillText("-", -25, 4);
+                drawNode(ctx, -45, 0, '#333', c, 0); drawNode(ctx, 45, 0, '#c0392b', c, 1);
+            } 
+            else if (c.type === 'bulb') {
+                ctx.fillStyle = '#bdc3c7'; ctx.fillRect(-12, 10, 24, 18);
+                ctx.strokeStyle='#7f8c8d'; ctx.beginPath(); ctx.moveTo(-12,14); ctx.lineTo(12,18); ctx.moveTo(-12,19); ctx.lineTo(12,23); ctx.stroke();
+                ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.moveTo(-8,28); ctx.lineTo(8,28); ctx.lineTo(4,34); ctx.lineTo(-4,34); ctx.fill();
+                
+                let alpha = 0.3; let color = '230,230,230'; let blur = 0;
+                if (c.brightness > 0.1) {
+                    if (c.brightness < 1.0) { color = '255,249,196'; alpha = 0.9; blur = 15; } 
+                    else if (c.brightness < 2.0) { color = '255,235,59'; alpha = 1.0; blur = 30; } 
+                    else { color = '255,255,255'; alpha = 1.0; blur = 50; } 
+                }
+                ctx.shadowColor = `rgb(${color})`; ctx.shadowBlur = blur; ctx.fillStyle = `rgba(${color}, ${alpha})`;
+                ctx.beginPath(); ctx.arc(0, -5, 20, 0, Math.PI*2); ctx.fill(); 
+                ctx.lineWidth=1; ctx.strokeStyle='#bdc3c7'; ctx.stroke(); ctx.shadowBlur = 0;
+                
+                ctx.strokeStyle = (c.brightness > 0.1) ? '#fff' : '#7f8c8d'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-6,10); ctx.lineTo(-6,-5); ctx.lineTo(0,0); ctx.lineTo(6,-5); ctx.lineTo(6,10); ctx.stroke();
+                drawNode(ctx, 0, 32, '#333', c, 0); drawNode(ctx, 16, 18, '#333', c, 1);
+            } 
+            else if (c.type === 'box') {
+                ctx.fillStyle = c.isOverheated ? '#c0392b' : '#9b59b6';
+                ctx.fillRect(-50, -30, 100, 60);
+                ctx.lineWidth = 2; ctx.strokeStyle='white'; ctx.strokeRect(-50, -30, 100, 60);
+                ctx.fillStyle = 'white'; ctx.font="bold 20px Arial"; ctx.fillText("Box " + c.subType, -30, 8);
+                drawNode(ctx, -50, 0, '#333', c, 0); drawNode(ctx, 50, 0, '#333', c, 1);
+            }
+            ctx.restore();
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    function drawNode(ctx, x, y, color, comp, idx) {
+        let isTarget = (snapNode && snapNode.parentId === comp.id && snapNode.nodeIndex === idx);
+        let isStart = (wireStartNode && wireStartNode.parentId === comp.id && wireStartNode.nodeIndex === idx);
+        
+        ctx.beginPath();
+        if (isTarget || isStart) {
+            ctx.arc(x, y, 8, 0, Math.PI*2);
+            ctx.fillStyle = '#2ecc71'; ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 2;
+        } else {
+            ctx.arc(x, y, 5, 0, Math.PI*2);
+            ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+        }
+        ctx.fill(); ctx.stroke();
+    }
+
+    // --- 事件處理 ---
+    function getMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    canvas.addEventListener('mousedown', e => {
+        const pos = getMousePos(e);
+        for (let c of components) {
+            let node = c.checkNodeProximity(pos.x, pos.y);
+            if (node) { isDragging = true; wireStartNode = node; return; }
+        }
+        for (let i = components.length - 1; i >= 0; i--) {
+            if (components[i].isMouseOverBody(pos.x, pos.y)) { isDragging = true; dragTarget = components[i]; return; }
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        const pos = getMousePos(e);
+        mouseX = pos.x; mouseY = pos.y;
+
+        if (isDragging && dragTarget) { dragTarget.x = mouseX; dragTarget.y = mouseY; checkCircuit(); }
+
+        snapNode = null;
+        if (isDragging && wireStartNode) {
+            for (let c of components) {
+                let node = c.checkNodeProximity(mouseX, mouseY);
+                if (node && (node.parentId !== wireStartNode.parentId || node.nodeIndex !== wireStartNode.nodeIndex)) {
+                    snapNode = node; break;
+                }
+            }
+        }
+        
+        let hoverAny = components.some(c => c.checkNodeProximity(mouseX, mouseY) || c.isMouseOverBody(mouseX, mouseY));
+        canvas.style.cursor = hoverAny ? 'pointer' : 'default';
+    });
+
+    canvas.addEventListener('mouseup', e => {
+        const pos = getMousePos(e);
+        if (isDragging && wireStartNode) {
+            let endNode = snapNode;
+            if (!endNode) {
+                for (let c of components) {
+                    endNode = c.checkNodeProximity(pos.x, pos.y);
+                    if (endNode) break;
+                }
+            }
+
+            if (endNode && (endNode.parentId !== wireStartNode.parentId)) {
+                let exists = wires.some(w => 
+                    (w.startCompId === wireStartNode.parentId && w.endCompId === endNode.parentId && w.startNodeIdx === wireStartNode.nodeIndex && w.endNodeIdx === endNode.nodeIndex) ||
+                    (w.endCompId === wireStartNode.parentId && w.startCompId === endNode.parentId && w.endNodeIdx === wireStartNode.nodeIndex && w.startNodeIdx === endNode.nodeIndex)
+                );
+                
+                if (!exists) {
+                    wires.push({
+                        startCompId: wireStartNode.parentId, startNodeIdx: wireStartNode.nodeIndex,
+                        endCompId: endNode.parentId, endNodeIdx: endNode.nodeIndex, isHot: false
+                    });
+                    checkCircuit();
+                }
+            }
+        }
+        isDragging = false; dragTarget = null; wireStartNode = null; snapNode = null;
+    });
+
+    canvas.addEventListener('dblclick', e => {
+        const pos = getMousePos(e);
+        let hitIdx = components.findIndex(c => c.isMouseOverBody(pos.x, pos.y));
+        if (hitIdx >= 0) { removeComponent(components[hitIdx]); return; }
+
+        let wIdx = wires.findIndex(w => {
+            let c1 = components.find(c => c.id === w.startCompId);
+            let c2 = components.find(c => c.id === w.endCompId);
+            if (!c1 || !c2) return false;
+            let p1 = c1.getWorldNode(w.startNodeIdx);
+            let p2 = c2.getWorldNode(w.endNodeIdx);
+            let dist = Math.abs((p2.y - p1.y) * pos.x - (p2.x - p1.x) * pos.y + p2.x * p1.y - p2.y * p1.x) / Math.sqrt((p2.y - p1.y)**2 + (p2.x - p1.x)**2);
+            return dist < 10;
+        });
+        if (wIdx >= 0) { wires.splice(wIdx, 1); checkCircuit(); }
+    });
+
+    // --- 物理核心 ---
+    function checkCircuit() {
+        isShortCircuit = false;
+        components.forEach(c => { c.brightness = 0; c.isOverheated = false; });
+        wires.forEach(w => w.isHot = false);
+        
+        let powerSources = components.filter(c => c.type === 'battery' || (c.type === 'box' && c.subType === 'A'));
+        if (powerSources.length === 0) { updateStatus("請加入電源"); return; }
+        updateStatus("實驗進行中...");
+
+        for (let source of powerSources) {
+            let shortLoop = findShortLoop(source.id, 1, [], new Set(), source.id);
+            if (shortLoop) {
+                isShortCircuit = true;
+                source.isOverheated = true;
+                shortLoop.forEach(w => w.isHot = true);
+                updateStatus("⚠️ 短路警告！電路過熱！", true);
+            }
+        }
+
+        if (isShortCircuit) return; 
+
+        for (let source of powerSources) {
+            solveCircuit(source.id, 1, 1.5, 0, [], new Set(), source.id);
+        }
+    }
+
+    function findShortLoop(currCompId, currNodeIdx, pathWires, visitedWires, sourceId) {
+        let connectedWires = wires.filter(w => 
+            (w.startCompId === currCompId && w.startNodeIdx === currNodeIdx) ||
+            (w.endCompId === currCompId && w.endNodeIdx === currNodeIdx)
+        );
+
+        for (let w of connectedWires) {
+            if (visitedWires.has(w)) continue;
+            let nextCompId = (w.startCompId === currCompId) ? w.endCompId : w.startCompId;
+            let nextNodeIdx = (w.startCompId === currCompId) ? w.endNodeIdx : w.startNodeIdx;
+            let nextComp = components.find(c => c.id === nextCompId);
+            if (!nextComp) continue;
+
+            if (nextComp.id === sourceId && nextNodeIdx === 0) { pathWires.push(w); return pathWires; }
+            if (nextComp.id === sourceId && nextNodeIdx === 1) continue;
+
+            let isConductor = false;
+            if (nextComp.type === 'box' && nextComp.subType === 'C') isConductor = true;
+            if (nextComp.type === 'battery' || (nextComp.type === 'box' && nextComp.subType === 'A')) isConductor = true;
+
+            if (isConductor) {
+                let newVisited = new Set(visitedWires); newVisited.add(w);
+                let newPath = [...pathWires, w];
+                let exitNodeIdx = (nextNodeIdx === 0) ? 1 : 0;
+                if (newPath.length < 10) {
+                    let res = findShortLoop(nextComp.id, exitNodeIdx, newPath, newVisited, sourceId);
+                    if (res) return res;
+                }
+            }
+        }
+        return null;
+    }
+
+    function solveCircuit(currCompId, currNodeIdx, V, R, path, visitedWires, sourceId) {
+        let outgoingWires = wires.filter(w => 
+            (w.startCompId === currCompId && w.startNodeIdx === currNodeIdx) ||
+            (w.endCompId === currCompId && w.endNodeIdx === currNodeIdx)
+        );
+
+        outgoingWires.forEach(w => {
+            if (visitedWires.has(w)) return;
+            let nextCompId = (w.startCompId === currCompId) ? w.endCompId : w.startCompId;
+            let nextNodeIdx = (w.startCompId === currCompId) ? w.endNodeIdx : w.startNodeIdx;
+            let nextComp = components.find(c => c.id === nextCompId);
+            if (!nextComp) return;
+
+            if (nextComp.id === sourceId && nextNodeIdx === 0) {
+                let current = (R > 0) ? V / R : 0;
+                if (current > 0.1) {
+                    path.forEach(item => { 
+                        if (item.type === 'bulb') item.brightness = Math.max(item.brightness, current);
+                    });
+                }
+                return;
+            }
+            if (nextComp.id === sourceId && nextNodeIdx === 1) return;
+
+            let pass = false, dV = 0, dR = 0;
+            if (nextComp.type === 'bulb') { pass = true; dR = 1.0; }
+            else if (nextComp.type === 'box') {
+                if (nextComp.subType === 'A') { pass = true; dV = (nextNodeIdx === 0) ? 1.5 : -1.5; }
+                else if (nextComp.subType === 'C') { pass = true; dR = 0; }
+                else if (nextComp.subType === 'D') { pass = true; dR = 1.0; }
+            }
+            else if (nextComp.type === 'battery') {
+                pass = true; dV = (nextNodeIdx === 0) ? 1.5 : -1.5;
+            }
+
+            if (pass) {
+                let exitNodeIdx = (nextNodeIdx === 0) ? 1 : 0;
+                let newPath = [...path, nextComp];
+                let newVisited = new Set(visitedWires); newVisited.add(w);
+                if (path.length < 15) solveCircuit(nextComp.id, exitNodeIdx, V+dV, R+dR, newPath, newVisited, sourceId);
+            }
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
